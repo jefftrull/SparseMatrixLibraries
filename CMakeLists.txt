@@ -2,6 +2,8 @@ cmake_minimum_required( VERSION 3.5 )
 
 PROJECT( SparseMatrixLibraries )
 
+set( CMAKE_CXX_STANDARD 14 )     # it's time, people
+
 # You can use SuiteSparse/CSparse out of regular Ubuntu system paths if you install
 # libsuitesparse-dev.
 # If you want to use a recent version of SuiteSparse, download and build it, then
@@ -47,13 +49,6 @@ endif()
 add_executable( cs_qr csqr.cpp )
 add_executable( sp_qr spqr.cpp )
 
-# shared properties
-foreach( x cs_qr sp_qr )
-  set_target_properties( ${x} PROPERTIES
-    CXX_STANDARD 14
-  )
-endforeach()
-
 # special properties for CSparse
 target_link_libraries( cs_qr cxsparse )
 
@@ -66,3 +61,19 @@ endif()
 if( METIS_LIB )
   target_link_libraries( sp_qr ${METIS_LIB} camd )
 endif()
+
+# finally Eigen
+if( EIGEN3_INCLUDE_DIR )
+  set( CMAKE_MODULE_PATH ${EIGEN3_INCLUDE_DIR}/cmake )
+  list( REMOVE_DUPLICATES CMAKE_MODULE_PATH )
+
+  find_package( Eigen3 )
+  if( NOT EIGEN3_FOUND )
+    message( FATAL_ERROR "EIGEN3_INCLUDE_DIR supplied but Eigen was not found" )
+  endif()
+  # TODO: utilize other find modules (cholmod, blas, Metis, etc.) supplied with Eigen
+
+  include_directories( SYSTEM ${EIGEN3_INCLUDE_DIR} )
+endif()
+
+add_executable( ei_qr eisqr.cpp )
