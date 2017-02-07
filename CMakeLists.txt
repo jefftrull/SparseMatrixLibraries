@@ -24,6 +24,8 @@ if( SUITESPARSE_ROOT )
     ${SUITESPARSE_ROOT}/COLAMD/Lib
     ${SUITESPARSE_ROOT}/AMD/Lib
     ${SUITESPARSE_ROOT}/SPQR/Lib
+    ${SUITESPARSE_ROOT}/KLU/Lib
+    ${SUITESPARSE_ROOT}/BTF/Lib
     ${SUITESPARSE_ROOT}/SuiteSparse_config
   )
 
@@ -46,20 +48,20 @@ else()
 endif()
 
 # CSparse and SPQR examples
-add_executable( cs_qr csqr.cpp )
-add_executable( sp_qr spqr.cpp )
+add_executable( cs_prima csprima.cpp )
+add_executable( sp_prima spprima.cpp )
 
 # special properties for CSparse
-target_link_libraries( cs_qr cxsparse )
+target_link_libraries( cs_prima cxsparse )
 
 # special properties for SPQR
-target_link_libraries( sp_qr spqr cholmod ccolamd colamd amd )
-target_link_libraries( sp_qr openblas )  # other blas should be OK here too
+target_link_libraries( sp_prima klu btf spqr cholmod ccolamd colamd amd )
+target_link_libraries( sp_prima openblas )  # other blas should be OK here too
 if( SUITESPARSE_ROOT )
-  target_link_libraries( sp_qr suitesparseconfig )
+  target_link_libraries( sp_prima suitesparseconfig )
 endif()
 if( METIS_LIB )
-  target_link_libraries( sp_qr ${METIS_LIB} camd )
+  target_link_libraries( sp_prima ${METIS_LIB} camd )
 endif()
 
 # finally Eigen
@@ -76,4 +78,4 @@ if( EIGEN3_INCLUDE_DIR )
   include_directories( SYSTEM ${EIGEN3_INCLUDE_DIR} )
 endif()
 
-add_executable( ei_qr eisqr.cpp )
+add_executable( ei_prima eisprima.cpp )
