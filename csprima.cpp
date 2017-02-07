@@ -151,7 +151,7 @@ int main ()
     for ( csi j = 0; j <= 2; j++) {
         double * col = Q + 15*j;
         // make x a copy of the jth column of I
-        std::copy(col, col+15, x);
+        copy(col, col+15, x);
 
         // apply the Householder vectors that comprise Q
         for (csi k = j; k >= 0; k--) {
@@ -162,11 +162,11 @@ int main ()
 
     }
 
-    std::cout << "Q=[\n";
+    cout << "Q=[\n";
     for ( csi i = 0; i < 15; ++i) {
-        std::cout << Q[0*15+i] << ", " << Q[1*15+i] << ", " << Q[2*15+i] << ";\n";
+        cout << Q[0*15+i] << ", " << Q[1*15+i] << ", " << Q[2*15+i] << ";\n";
     }
-    std::cout << "]\n";
+    cout << "]\n";
             
     // clean up so valgrind etc. will be happy
     cs_free(P);
