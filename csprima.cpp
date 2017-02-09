@@ -6,8 +6,29 @@
 #include <cassert>
 #include <iostream>
 #include <algorithm>
+#include <memory>
 
 #include <cs.h>
+
+// Use std::unique_ptr plus a custom deleter to clean up the C-style manual memory management in CSparse
+
+struct cs_deleter {
+    void operator()(cs *p) {
+        cs_spfree(p);
+    }
+    void operator()(csn *p) {
+        cs_nfree(p);
+    }
+    void operator()(css *p) {
+        cs_sfree(p);
+    }
+    template<typename T>
+    void operator()(T *p) {
+        cs_free(p);
+    }
+};
+
+template<typename T> using cs_ptr = std::unique_ptr<T, cs_deleter>;
 
 struct triplet {
     int row;
@@ -66,14 +87,14 @@ int main ()
         {14, 2, -1}};
 
     // create a triplet matrix
-    cs * TG = cs_spalloc(15, 15, Gentries.size(), 1, 1);
+    auto TG = cs_ptr<cs>(cs_spalloc(15, 15, Gentries.size(), 1, 1));
 
     for ( size_t i = 0; i < Gentries.size(); ++i) {
-        assert(cs_entry(TG, Gentries[i].row, Gentries[i].col,Gentries[i].value));
+        assert(cs_entry(TG.get(), Gentries[i].row, Gentries[i].col,Gentries[i].value));
     }
 
     // create a "cs" structure from the triplet matrix
-    cs *G = cs_compress(TG); cs_spfree(TG);
+    auto G = cs_ptr<cs>(cs_compress(TG.get()));
 
     // We need to solve G\B but CSparse only has canned routines for B dense, so
     // we will start there and then convert.  Inefficient, though :(
@@ -88,11 +109,11 @@ int main ()
     // calculate LU factorization of G
     vector<double> workspace(15);
     // symbolic factorization first
-    css * S = cs_sqr ( 3,   // order amd(A'*A)
-                       G,
-                       0 ); // for use by LU,  not QR
+    auto S = cs_ptr<css>(cs_sqr ( 3,   // order amd(A'*A)
+                                  G.get(),
+                                  0 )); // for use by LU,  not QR
     // then numeric
-    csn * N = cs_lu ( G, S, numeric_limits<double>::epsilon() );
+    auto N = cs_ptr<csn>(cs_lu ( G.get(), S.get(), numeric_limits<double>::epsilon() ));
 
     // now use the result to solve G^-1*B one column at a time
     for ( int j = 0; j < 3; j++ ) {
@@ -107,58 +128,57 @@ int main ()
         count_if(Adense.begin(), Adense.end(),
                       [](double x) { return (x != 0.0); });
 
-    cs * TA = cs_spalloc(15, 3, nonzeroA_count, 1, 1);
+    auto TA = cs_ptr<cs>(cs_spalloc(15, 3, nonzeroA_count, 1, 1));
 
     for ( size_t j = 0; j < 3; ++j) {
         for ( size_t i = 0; i < 15; ++i) {
             if ( Adense[15*j+i] != 0 ) {
-                assert(cs_entry(TA, i, j, Adense[15*j+i]));
+                assert(cs_entry(TA.get(), i, j, Adense[15*j+i]));
             }
         }
     }
-    cs *A = cs_compress(TA); cs_spfree(TA);
+    auto A = cs_ptr<cs>(cs_compress(TA.get()));
 
     // run QR on A
-    cs_sfree(S);
-    S = cs_sqr( 3,
-                A,
-                1 ); // for QR decomposition
+    S.reset(cs_sqr( 3,
+                    A.get(),
+                    1 )); // for QR decomposition
 
-    csn * result = cs_qr(A, S);
+    auto result = cs_ptr<csn>(cs_qr(A.get(), S.get()));
 
     using csi = int;
 
     // must reverse the permutation used for solves to generate Q
-    csi * P = cs_pinv(S->pinv, 15);
+    auto P = cs_ptr<csi>(cs_pinv(S->pinv, 15));
 
-    double * x = (double *)cs_calloc(S->m2, sizeof(double));
+    auto x = cs_ptr<double[]>((double *)cs_calloc(S->m2, sizeof(double)));
 
     cs* V = result->L;
 
     // generate Q:
 
     // create a *dense* identity matrix of the right size
-    double * I = (double *)cs_calloc (15*3, sizeof(double));
+    auto I = cs_ptr<double[]>((double *)cs_calloc (15*3, sizeof(double)));
     I[0*15+0] = 1;
     I[1*15+1] = 1;
     I[2*15+2] = 1;
 
     // apply householder vectors to I to produce Q
-    double * Q = I;
+    cs_ptr<double[]> Q = move(I);
 
     // following the pattern from cs_qrsol.c:
 
     for ( csi j = 0; j <= 2; j++) {
-        double * col = Q + 15*j;
+        double * col = Q.get() + 15*j;
         // make x a copy of the jth column of I
-        copy(col, col+15, x);
+        copy(col, col+15, x.get());
 
         // apply the Householder vectors that comprise Q
         for (csi k = j; k >= 0; k--) {
-            cs_happly( V, k, result->B[k], x );
+            cs_happly( V, k, result->B[k], x.get() );
         }
         // apply the row permutation
-        cs_ipvec( P, x, col, 15 );
+        cs_ipvec( P.get(), x.get(), col, 15 );
 
     }
 
@@ -168,17 +188,5 @@ int main ()
     }
     cout << "]\n";
             
-    // clean up so valgrind etc. will be happy
-    cs_free(P);
-    cs_free(x);
-    cs_free(I);
-    cs_nfree(result);
-    cs_sfree(S);
-    cs_nfree(N);
-    cs_spfree(A);
-    cs_spfree(G);
-    
-
-
     return (0) ;
 }

@@ -13,7 +13,7 @@ int main ()
     using namespace std;
     using namespace Eigen;
 
-    vector<Triplet<double> > Gentries{
+    vector<Triplet<double>> Gentries{
         {0, 0, 0.01},
         {0, 1, -0.01},
         {0, 12, 1},
