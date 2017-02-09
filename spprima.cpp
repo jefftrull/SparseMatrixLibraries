@@ -4,9 +4,90 @@
 #include <vector>
 #include <tuple>
 #include <cassert>
+#include <memory>
 
 #include <SuiteSparseQR.hpp>
 #include <klu.h>
+
+// Use std::unique_ptr plus a custom deleter to clean up the C-style manual memory management
+
+template<typename Common>
+struct ss_deleter {
+    ss_deleter(Common * cc) : cc_(cc) {}
+
+    void operator()(cholmod_triplet *& p) const {
+        cholmod_l_free_triplet(&p, cc_);
+    }
+    void operator()(cholmod_sparse *& p) const {
+        cholmod_l_free_sparse(&p, cc_);
+    }
+    void operator()(cholmod_dense *& p) const {
+        cholmod_l_free_dense(&p, cc_);
+    }
+    void operator()(klu_l_symbolic *& p) const {
+        klu_l_free_symbolic (&p, cc_);
+    }
+    void operator()(klu_l_numeric *& p) const {
+        klu_l_free_numeric (&p, cc_);
+    }
+
+
+private:
+    Common * cc_;
+
+};
+
+template<typename T, typename Common>
+using ss_ptr = std::unique_ptr<T, ss_deleter<Common>>;
+
+template<typename T, typename Common>
+ss_ptr<T, typename Common::wrapped_t>
+make_ss_ptr( T* p, Common & c ) {
+    return std::move(ss_ptr<T, typename Common::wrapped_t>(p, c.get()));
+}
+
+// take care of calling start and finish cleanly
+// also supply deleters as needed
+
+template<typename Common>
+struct common_wrapper {
+
+    using wrapped_t = Common;
+
+    common_wrapper() {}
+    ~common_wrapper() {}
+
+    // no copies, no assignments
+    common_wrapper(common_wrapper const& other) = delete;
+    common_wrapper & operator=(common_wrapper const&) = delete;
+
+    wrapped_t * get() {
+        return &common_;
+    }
+
+    ss_deleter<Common> deleter() {
+        return ss_deleter<Common>(&common_);
+    }
+
+private:
+
+    Common common_;
+};
+
+template<>
+common_wrapper<cholmod_common>::common_wrapper() {
+    cholmod_l_start(&common_);
+}
+
+template<>
+common_wrapper<cholmod_common>::~common_wrapper() {
+    cholmod_l_finish(&common_);
+}
+
+template<>
+common_wrapper<klu_l_common>::common_wrapper() {
+    klu_l_defaults(&common_);
+}
 
 struct triplet {
     int row;
@@ -18,10 +99,9 @@ int main ()
 {
     using namespace std;
 
-    cholmod_common Common, *cc ;
+    common_wrapper<cholmod_common> ccommon;
     // start CHOLMOD
-    cc = &Common ;
-    cholmod_l_start (cc) ;
+    cholmod_common * cc = ccommon.get() ;
 
     vector<triplet> Gentries{
         {0, 0, 0.01},
@@ -71,11 +151,13 @@ int main ()
 
     // now load into Cholmod "triplet matrices"
 
-    cholmod_triplet * Gct = cholmod_l_allocate_triplet(
-        15, 15, Gentries.size(),
-        0,  // stype: both upper and lower are stored
-        CHOLMOD_REAL,
-        cc);
+    auto Gct = make_ss_ptr(
+        cholmod_l_allocate_triplet(
+            15, 15, Gentries.size(),
+            0,  // stype: both upper and lower are stored
+            CHOLMOD_REAL,
+            cc),
+        ccommon);
     for ( size_t i = 0; i < Gentries.size(); ++i) {
         reinterpret_cast<long *>(Gct->i)[i] = Gentries[i].row;
         reinterpret_cast<long *>(Gct->j)[i] = Gentries[i].col;
@@ -84,59 +166,60 @@ int main ()
     Gct->nnz = Gentries.size();
 
     // convert triplet matrix to sparse
-    cholmod_sparse * G = cholmod_l_triplet_to_sparse(Gct, Gentries.size(), cc);
+    auto G = make_ss_ptr(
+        cholmod_l_triplet_to_sparse(Gct.get(), Gentries.size(), cc),
+        ccommon);
 
     // RHS needs to be dense due to API, so build B that way:
 
     // initialize A (the eventual result) with the contents of B
-    cholmod_dense * Adense = cholmod_l_zeros( 15, 3, CHOLMOD_REAL, cc );
+    auto Adense = make_ss_ptr(
+        cholmod_l_zeros( 15, 3, CHOLMOD_REAL, cc ),
+        ccommon);
     for ( size_t i = 0; i < Bentries.size(); ++i) {
         reinterpret_cast<double*>(Adense->x)[15*Bentries[i].col+Bentries[i].row] = Bentries[i].value;
     }
 
     // calculate G^-1*B via LU with the KLU package from SuiteSparse
     // It claims to be "well suited for circuit simulation", which this is
-    klu_l_common kcommon;
-    klu_l_defaults( &kcommon );
-    klu_l_symbolic * KS = klu_l_analyze( 15,
+    common_wrapper<klu_l_common> kcommon;
+    auto KS = make_ss_ptr(klu_l_analyze( 15,
                                          reinterpret_cast<long*>(G->p),
                                          reinterpret_cast<long*>(G->i),
-                                         &kcommon );
-    klu_l_numeric  * KN = klu_l_factor(  reinterpret_cast<long*>(G->p),
-                                         reinterpret_cast<long*>(G->i),
-                                         reinterpret_cast<double*>(G->x),
-                                         KS,
-                                         &kcommon );
-    klu_l_solve ( KS,          // Symbolic factorization
-                  KN,          // Numeric
+                                         kcommon.get() ),
+                          kcommon);
+    auto KN = make_ss_ptr(klu_l_factor(   reinterpret_cast<long*>(G->p),
+                                          reinterpret_cast<long*>(G->i),
+                                          reinterpret_cast<double*>(G->x),
+                                          KS.get(),
+                                          kcommon.get() ),
+                          kcommon);
+
+    klu_l_solve ( KS.get(),          // Symbolic factorization
+                  KN.get(),          // Numeric
                   15,
                   3,
                   reinterpret_cast<double*>(Adense->x),
-                  &kcommon );
+                  kcommon.get() );
 
     // convert to cholmod_sparse
-    cholmod_sparse * A = cholmod_l_dense_to_sparse( Adense, 1, cc );
+    auto A = make_ss_ptr(
+        cholmod_l_dense_to_sparse( Adense.get(), 1, cc ),
+        ccommon);
 
     // run QR
     cholmod_sparse * Q;   // outputs
     cholmod_sparse * R;
-    assert( SuiteSparseQR<double> ( SPQR_ORDERING_DEFAULT, SPQR_DEFAULT_TOL, 3, A,
+    assert( SuiteSparseQR<double> ( SPQR_ORDERING_DEFAULT, SPQR_DEFAULT_TOL, 3, A.get(),
                                     &Q, &R, nullptr, cc ) >= 0);
 
     // print out Q matrix
     cholmod_l_write_sparse( stdout, Q , NULL, NULL, cc );
 
     // free everything and finish CHOLMOD
-    klu_l_free_symbolic (&KS, &kcommon);
-    klu_l_free_numeric  (&KN, &kcommon);
 
-    cholmod_l_free_sparse (&A, cc) ;
-    cholmod_l_free_dense  (&Adense, cc) ;
-    cholmod_l_free_sparse (&G, cc) ;
     cholmod_l_free_sparse (&Q, cc) ;
     cholmod_l_free_sparse (&R, cc) ;
-    cholmod_l_free_triplet (&Gct, cc) ;
-    cholmod_l_finish (cc) ;
 
     return (0) ;
 }
