@@ -214,7 +214,7 @@ int main ()
                                     &Q, &R, nullptr, cc ) >= 0);
 
     // print out Q matrix
-    cholmod_l_write_sparse( stdout, Q , NULL, NULL, cc );
+    cholmod_l_write_sparse( stdout, Q , nullptr, nullptr, cc );
 
     // free everything and finish CHOLMOD
 
