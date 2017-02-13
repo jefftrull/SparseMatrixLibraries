@@ -79,3 +79,7 @@ if( EIGEN3_INCLUDE_DIR )
 endif()
 
 add_executable( ei_prima eisprima.cpp )
+
+
+# experiment: integrate our code using a single main() and a Policy wrapping each library
+add_subdirectory( policies )
