@@ -21,7 +21,8 @@ template<typename T, typename U> concept bool DereferencesTo =
 };
 
 template<typename T, typename ...Args> concept bool ConstructibleFrom =
-    std::is_constructible<T, Args...>::value;
+    std::is_constructible<T, Args...>::value ||     // constructors
+    requires(Args... args) { { T{args...} } -> T }; // aggregate initialization
 
 template<typename T> concept bool ForwardIterator =
     std::is_convertible<typename std::iterator_traits<T>::iterator_category,
