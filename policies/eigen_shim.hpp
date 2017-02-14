@@ -1,7 +1,4 @@
-// describe the type requirements our code has from a sparse library
-#include "sparselib_concept.hpp"
-
-// Implement those requirements using Eigen
+// Implement SparseLibrary requirements using Eigen
 #include <Eigen/Sparse>
 #include <Eigen/SparseQR>
 #include <Eigen/SparseLU>

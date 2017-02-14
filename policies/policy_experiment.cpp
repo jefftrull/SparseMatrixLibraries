@@ -1,14 +1,22 @@
 #include <vector>
 #include <iostream>
 
-#ifdef USE_EIGEN
+// choose library to use
+#if defined(USE_EIGEN)
 #include "eigen_shim.hpp"
 using sparse_lib_t = EigenShim;
+#elif defined(USE_CSPARSE)
+#include "csparse_shim.hpp"
+using sparse_lib_t = CSparseShim;
 #endif
+
+// describe the type requirements our code has from a sparse library
+#include "sparselib_concept.hpp"
 
 // generic code that uses the Concept
 
-template<SparseLibrary L>
+template<SparseLibrary L>   // L must meet the SparseLibrary Concept
+// also the sparse matrix type it supplies must handle the iterators will we use with it
 requires ConstructibleFrom<typename L::sparsemat_t, typename L::index_t, typename L::index_t,
                            typename std::vector<typename L::triplet_t>::const_iterator,
                            typename std::vector<typename L::triplet_t>::const_iterator>
@@ -81,12 +89,6 @@ void startPrima() {
 
 
 int main() {
+    // run the first steps of Prima with my chosen policy
     startPrima<sparse_lib_t>();
-
-/*
-    std::vector<EigenShim::triplet_t> triplets;
-    EigenShim::sparsemat_t s(15, 15, triplets.begin(), triplets.end());
-    EigenShim::lu_t lu(s);
-    EigenShim::lu_t bar = lu;
-*/
 }
