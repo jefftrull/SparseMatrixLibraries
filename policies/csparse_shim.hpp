@@ -50,7 +50,7 @@ struct CSparseShim {
                                  boost::forward_traversal_tag> {
         sparse_entry_iterator() {}
         sparse_entry_iterator( cs_shared_ptr<cs> mat )
-            : mat_(std::move(mat)), entry_{index_t(0), index_t(0)} {
+            : mat_(std::move(mat)), entry_{index_t(0), index_t(0), value_t(0)} {
             advance_to_valid();
         }
 
@@ -142,10 +142,11 @@ struct CSparseShim {
 
     private:
 
-        index_t rows_, cols_;
-
         cs_unique_ptr<css> symbolic_;
         cs_unique_ptr<csn> numeric_;
+
+        index_t rows_, cols_;
+
     };
 
 };

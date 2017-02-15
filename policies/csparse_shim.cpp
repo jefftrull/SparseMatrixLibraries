@@ -148,4 +148,6 @@ std::ostream& operator<<(std::ostream& os, CSparseShim::sparsemat_t const & m) {
     assert(&os == &std::cout);   // because cs_print only does stdout
     cs_print( m.wrapped().get(), 0 );
     fflush(stdout);
+
+    return os;
 }

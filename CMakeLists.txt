@@ -47,6 +47,10 @@ else()
   message( FATAL_ERROR "could not find SuiteSparse headers" )
 endif()
 
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror" )
+
+set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer" )
+
 # CSparse and SPQR examples
 add_executable( cs_prima csprima.cpp )
 add_executable( ss_prima ssprima.cpp )
