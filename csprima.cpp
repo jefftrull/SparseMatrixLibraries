@@ -151,7 +151,7 @@ int main ()
     // must reverse the permutation used for solves to generate Q
     auto P = cs_ptr<csi>(cs_pinv(S->pinv, 15));
 
-    auto x = cs_ptr<double[]>((double *)cs_calloc(S->m2, sizeof(double)));
+    vector<double> x(S->m2, 0.);
 
     cs* V = result->L;
 
@@ -171,14 +171,14 @@ int main ()
     for ( csi j = 0; j <= 2; j++) {
         double * col = Q.get() + 15*j;
         // make x a copy of the jth column of I
-        copy(col, col+15, x.get());
+        copy(col, col+15, x.data());
 
         // apply the Householder vectors that comprise Q
         for (csi k = j; k >= 0; k--) {
-            cs_happly( V, k, result->B[k], x.get() );
+            cs_happly( V, k, result->B[k], x.data() );
         }
         // apply the row permutation
-        cs_ipvec( P.get(), x.get(), col, 15 );
+        cs_ipvec( P.get(), x.data(), col, 15 );
 
     }
 
