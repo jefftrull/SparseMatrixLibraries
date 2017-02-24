@@ -91,8 +91,8 @@ Shim::qr_t::qr_t( sparsemat_t const & mat ) {
                                     &Q, &R, nullptr, spqr_common.get() ) >= 0);
 
     // Now we can finally take ownership
-    Q_ =           make_ss_shared_ptr( Q, spqr_common );
-    R_ = std::move(make_ss_unique_ptr( R, spqr_common ));
+    Q_ = make_ss_shared_ptr( Q, spqr_common );
+    R_ = make_ss_unique_ptr( R, spqr_common );
 }
 
 Shim::sparsemat_t
