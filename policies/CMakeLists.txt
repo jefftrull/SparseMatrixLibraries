@@ -4,26 +4,39 @@
 
 find_package( Boost 1.63 )
 
-# In order to use the Concepts TS we need a recent version of gcc
-if( ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" ) AND NOT ( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.2.0 ) )
-  # Only difference between Eigen/CSparse/SuiteSparse builds will be a preprocessor definition
-  add_executable( epolicy policy_experiment.cpp )
-  target_compile_options( epolicy PUBLIC -fconcepts )
-  target_compile_definitions( epolicy PUBLIC USE_EIGEN )
+# Define targets
 
-  if ( SUITESPARSE_ROOT )
-    add_executable( cpolicy policy_experiment.cpp csparse_shim.cpp )
-    target_compile_options( cpolicy PUBLIC -fconcepts )
-    target_compile_definitions( cpolicy PUBLIC USE_CSPARSE )
-    target_include_directories( cpolicy PUBLIC ${Boost_INCLUDE_DIRS} )
-    target_link_libraries( cpolicy cxsparse )
+add_executable( epolicy policy_experiment.cpp )
+# Only difference between Eigen/CSparse/SuiteSparse builds will be a preprocessor definition
+target_compile_definitions( epolicy PUBLIC USE_EIGEN )
+if ( SUITESPARSE_ROOT )
+  add_executable( cpolicy policy_experiment.cpp csparse_shim.cpp )
+  target_compile_definitions( cpolicy PUBLIC USE_CSPARSE )
+  target_include_directories( cpolicy PUBLIC ${Boost_INCLUDE_DIRS} )
+  target_link_libraries( cpolicy cxsparse )
 
-    add_executable( spolicy policy_experiment.cpp suitesparse_shim.cpp )
-    target_compile_options( spolicy PUBLIC -fconcepts )
-    target_compile_definitions( spolicy PUBLIC USE_SUITESPARSE )
-    target_include_directories( spolicy PUBLIC ${Boost_INCLUDE_DIRS} )
-    target_link_libraries( spolicy klu btf spqr cholmod ccolamd colamd amd openblas suitesparseconfig ${METIS_LIB} camd )
-  endif()
+  add_executable( spolicy policy_experiment.cpp suitesparse_shim.cpp )
+  target_compile_definitions( spolicy PUBLIC USE_SUITESPARSE )
+  target_include_directories( spolicy PUBLIC ${Boost_INCLUDE_DIRS} )
+  target_link_libraries( spolicy klu btf spqr cholmod ccolamd colamd amd openblas suitesparseconfig ${METIS_LIB} camd )
 endif()
 
-# TODO: Boost.Concepts alternative
+# Choose between Concept implementations
+# In order to use the Concepts TS we need a recent version of gcc
+if( ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" ) AND NOT ( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.2.0 ) )
+  target_compile_options( epolicy PUBLIC -fconcepts )
+  target_compile_definitions( epolicy PUBLIC USE_CONCEPTS_TS )
+
+  if ( SUITESPARSE_ROOT )
+    target_compile_options( cpolicy PUBLIC -fconcepts )
+    target_compile_definitions( cpolicy PUBLIC USE_CONCEPTS_TS )
+
+    target_compile_options( spolicy PUBLIC -fconcepts )
+    target_compile_definitions( spolicy PUBLIC USE_CONCEPTS_TS )
+  endif()
+else()
+  target_include_directories( epolicy PUBLIC ${Boost_INCLUDE_DIRS} )
+  target_include_directories( cpolicy PUBLIC ${Boost_INCLUDE_DIRS} )
+  target_include_directories( spolicy PUBLIC ${Boost_INCLUDE_DIRS} )
+endif()
+

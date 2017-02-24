@@ -14,16 +14,29 @@ using sparse_lib_t = SuiteSparse::Shim;
 #endif
 
 // describe the type requirements our code has from a sparse library
+#ifdef USE_CONCEPTS_TS
 #include "sparselib_concept.hpp"
+#else
+// Boost Concept Check library as an alternative
+#include <boost/concept/requires.hpp>
+#include "sparselib_concept_boost.hpp"
+#endif
 
 // generic code that uses the Concept
 
+#ifdef USE_CONCEPTS_TS
 template<SparseLibrary L>   // L must meet the SparseLibrary Concept
 // also the sparse matrix type it supplies must handle the iterators will we use with it
 requires ConstructibleFrom<typename L::sparsemat_t, typename L::index_t, typename L::index_t,
                            typename std::vector<typename L::triplet_t>::const_iterator,
                            typename std::vector<typename L::triplet_t>::const_iterator>
-void startPrima() {
+void
+#else
+template<typename L>
+BOOST_CONCEPT_REQUIRES(((SparseLib<L>)),  // concept(s)
+                       (void))            // return type
+#endif
+startPrima() {
     // run the first few steps of Prima using our SparseLibrary
     using namespace std;
     vector<typename L::triplet_t> Gentries{
