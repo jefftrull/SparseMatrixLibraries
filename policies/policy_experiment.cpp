@@ -33,7 +33,7 @@ requires ConstructibleFrom<typename L::sparsemat_t, typename L::index_t, typenam
 void
 #else
 template<typename L>
-BOOST_CONCEPT_REQUIRES(((SparseLib<L>)),  // concept(s)
+BOOST_CONCEPT_REQUIRES(((SparseLibrary<L>)),  // concept(s)
                        (void))            // return type
 #endif
 startPrima() {
