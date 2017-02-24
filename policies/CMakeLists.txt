@@ -17,6 +17,12 @@ if( ( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" ) AND NOT ( CMAKE_CXX_COMPILER_VERSIO
     target_compile_definitions( cpolicy PUBLIC USE_CSPARSE )
     target_include_directories( cpolicy PUBLIC ${Boost_INCLUDE_DIRS} )
     target_link_libraries( cpolicy cxsparse )
+
+    add_executable( spolicy policy_experiment.cpp suitesparse_shim.cpp )
+    target_compile_options( spolicy PUBLIC -fconcepts )
+    target_compile_definitions( spolicy PUBLIC USE_SUITESPARSE )
+    target_include_directories( spolicy PUBLIC ${Boost_INCLUDE_DIRS} )
+    target_link_libraries( spolicy klu btf spqr cholmod ccolamd colamd amd openblas suitesparseconfig ${METIS_LIB} camd )
   endif()
 endif()
 

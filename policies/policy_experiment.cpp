@@ -8,6 +8,9 @@ using sparse_lib_t = EigenShim;
 #elif defined(USE_CSPARSE)
 #include "csparse_shim.hpp"
 using sparse_lib_t = CSparseShim;
+#elif defined(USE_SUITESPARSE)
+#include "suitesparse_shim.hpp"
+using sparse_lib_t = SuiteSparse::Shim;
 #endif
 
 // describe the type requirements our code has from a sparse library
