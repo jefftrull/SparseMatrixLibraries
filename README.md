@@ -8,3 +8,5 @@ As an outgrowth of some debugging I've been doing I made test cases of the same 
 
 It seemed like a good idea to upload these test cases for public reference.
 
+In addition I have used those three different implementations as an example of a Policy pattern,
+with the supplied implementations checked against Concepts using either the [Concepts TS](http://en.cppreference.com/w/cpp/language/constraints) or the [Boost Concept Check Library](http://www.boost.org/doc/libs/1_63_0/libs/concept_check/concept_check.htm), depending on compiler support. For details see the code in the `policies/` directory.
