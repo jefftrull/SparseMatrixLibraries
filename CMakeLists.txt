@@ -58,6 +58,7 @@ set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer" )
 # CSparse and SPQR examples
 add_executable( cs_prima csprima.cpp )
 add_executable( ss_prima ssprima.cpp )
+add_executable( rqrss repro_qr.cpp )    # reproduce problem Eigen calculation in SuiteSparse
 
 # special properties for CSparse
 target_link_libraries( cs_prima cxsparse )
@@ -88,6 +89,8 @@ if( EIGEN3_INCLUDE_DIR )
 endif()
 
 add_executable( ei_prima eisprima.cpp )
+
+add_executable( rqre repro_eigen.cpp )  # reproduce problem Eigen calculation
 
 # experiment: integrate our code using a single main() and a Policy wrapping each library
 add_subdirectory( policies )
