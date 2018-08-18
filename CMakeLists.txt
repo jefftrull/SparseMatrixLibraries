@@ -4,6 +4,9 @@ PROJECT( SparseMatrixLibraries )
 
 set( CMAKE_CXX_STANDARD 14 )     # it's time, people
 
+# Create a compilation database (compile_commands.json) for the use of Clang tools
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
 # You can use SuiteSparse/CSparse out of regular Ubuntu system paths if you install
 # libsuitesparse-dev.
 # If you want to use a recent version of SuiteSparse, download and build it, then
@@ -26,6 +29,7 @@ if( SUITESPARSE_ROOT )
     ${SUITESPARSE_ROOT}/SPQR/Lib
     ${SUITESPARSE_ROOT}/KLU/Lib
     ${SUITESPARSE_ROOT}/BTF/Lib
+    ${SUITESPARSE_ROOT}/CAMD/Lib
     ${SUITESPARSE_ROOT}/SuiteSparse_config
   )
 
@@ -54,6 +58,7 @@ set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer" )
 # CSparse and SPQR examples
 add_executable( cs_prima csprima.cpp )
 add_executable( ss_prima ssprima.cpp )
+add_executable( rqrss repro_qr.cpp )    # reproduce problem Eigen calculation in SuiteSparse
 
 # special properties for CSparse
 target_link_libraries( cs_prima cxsparse )
@@ -61,6 +66,7 @@ target_link_libraries( cs_prima cxsparse )
 # special properties for SPQR
 target_link_libraries( ss_prima klu btf spqr cholmod ccolamd colamd amd )
 target_link_libraries( ss_prima openblas )  # other blas should be OK here too
+target_link_libraries( rqrss klu btf spqr cholmod ccolamd colamd amd openblas suitesparseconfig ${METIS_LIB} camd)
 if( SUITESPARSE_ROOT )
   target_link_libraries( ss_prima suitesparseconfig )
 endif()
@@ -84,6 +90,7 @@ endif()
 
 add_executable( ei_prima eisprima.cpp )
 
+add_executable( rqre repro_eigen.cpp )  # reproduce problem Eigen calculation
 
 # experiment: integrate our code using a single main() and a Policy wrapping each library
 add_subdirectory( policies )
