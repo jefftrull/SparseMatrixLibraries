@@ -181,5 +181,28 @@ int main ()
     }
     printf("\n");
         
+    // Now find out what the permutation is if SuiteSparse's internal colamd is used on its own
+    // (code *actually* does a bunch of other stuff first, including moving dense or null
+    // columns and rows to the end, which in our test case nearly eliminates the work for colamd)
+    // use the approach from Eigen
+    auto Alen = colamd_recommended(11, 4, 5);
+    std::vector<long> p((long*)A->p, (long*)A->p + 6);
+    std::vector<long> A_idx(Alen);
+    std::copy((long*)A->i, (long*)A->i + 11, A_idx.data());
+    double knobs[COLAMD_KNOBS];
+    long   stats[COLAMD_STATS];
+    colamd_l(4, 5, Alen, A_idx.data(), p.data(), knobs, stats);
 
+    // turn permutation into something we understand
+    std::vector<long> perm(5);
+    for (long i = 0; i < 5; ++i)
+    {
+        perm[p[i]] = i;
+    }
+
+    printf("permutation from plain colamd run is:\n");
+    for (int i = 0; i < 5; ++i) {
+      printf("%ld ", perm[i]);
+    }
+    printf("\n");
 }
