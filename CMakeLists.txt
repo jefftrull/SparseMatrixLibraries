@@ -74,20 +74,11 @@ if( METIS_LIB )
 endif()
 
 # finally Eigen
-if( EIGEN3_INCLUDE_DIR )
-  set( CMAKE_MODULE_PATH ${EIGEN3_INCLUDE_DIR}/cmake )
-  list( REMOVE_DUPLICATES CMAKE_MODULE_PATH )
-
-  find_package( Eigen3 )
-  if( NOT EIGEN3_FOUND )
-    message( FATAL_ERROR "EIGEN3_INCLUDE_DIR supplied but Eigen was not found" )
-  endif()
-  # TODO: utilize other find modules (cholmod, blas, Metis, etc.) supplied with Eigen
-
-  include_directories( SYSTEM ${EIGEN3_INCLUDE_DIR} )
-endif()
+find_package( Eigen3 REQUIRED NO_MODULE )
+# TODO: utilize other find modules (cholmod, blas, Metis, etc.) supplied with Eigen
 
 add_executable( ei_prima eisprima.cpp )
+target_link_libraries( ei_prima Eigen3::Eigen )
 
 # experiment: integrate our code using a single main() and a Policy wrapping each library
 add_subdirectory( policies )
